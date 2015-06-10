@@ -10,9 +10,9 @@
 
 // Constants
 // Digital I/O pins
-const byte STAT1 = 7;
-const byte STAT2 = 8;
-const byte FONA_RST = 17;
+const byte FONA_KEY = 10;
+const byte FONA_RST = 12;
+const byte FONA_EN_BAT = 13;
 
 // Analog I/O pins
 const byte LIGHT = A1;
@@ -52,12 +52,6 @@ Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
 void setup() {
   Serial.begin(115200);
   Serial.println(F("Initializing..."));
-
-  // Connection to the SIM800
-  Serial1.begin(4800);
-
-  pinMode(STAT1, OUTPUT); // Status LED Blue
-  pinMode(STAT2, OUTPUT); // Status LED Green
   
   pinMode(REFERENCE_3V3, INPUT);
   pinMode(LIGHT, INPUT);
@@ -74,8 +68,19 @@ void setup() {
   // Start EC sensor
   FreqCount.begin(1000);
 
+  // Set key pin to low
+  pinMode(FONA_KEY, OUTPUT);
+  digitalWrite(FONA_KEY, LOW);
+
+  // Enables fona battery
+  pinMode(FONA_EN_BAT, OUTPUT);
+  digitalWrite(FONA_EN_BAT, HIGH);
+
+  // Connection to the SIM800
+  Serial2.begin(4800);
+
   // See if the FONA is responding
-  if (!fona.begin(Serial1)) {
+  if (!fona.begin(Serial2)) {
     Serial.println(F("FONA not found"));
     while (1);
   }
@@ -87,6 +92,8 @@ void setup() {
   if (!fona.enableNetworkTimeSync(true)) {
     Serial.println(F("Failed to enable time sync"));
   }
+
+  calc_sensors();
 }
 
 void loop() {
