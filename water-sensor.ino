@@ -3,6 +3,7 @@
 #include <Wire.h> //I2C needed for sensors
 #include "MPL3115A2.h" //Pressure sensor
 #include "HTU21D.h" //Humidity sensor
+#include "OneWire.h" // Water temperature sensor
 
 #include "FreqCount.h"
 
@@ -15,11 +16,12 @@ const byte FONA_RST = 12;
 const byte FONA_EN_BAT = 13;
 
 // Analog I/O pins
-const byte LIGHT = A1;
-const byte REFERENCE_3V3 = A3;
-const byte WDIR = A0;
-const byte PH_PIN = A11;
-const byte ORP_PIN = A12;
+const byte LIGHT = A5; // Not currently used
+const byte REFERENCE_3V3 = A3; // Not currently used
+const byte WDIR = A0; // Not currently used
+const byte PH_PIN = A4;
+const byte ORP_PIN = A3;
+const byte WTEMP_PIN = A15;
 // Conductivity sensor (EC) uses pin 47 and disables pins 9, 10, 44, 45, 46.
 
 // Offset values
@@ -29,11 +31,13 @@ const float SYSTEM_VOLTAGE = 5.0;
 
 MPL3115A2 myPressure; // Create an instance of the pressure sensor
 HTU21D myHumidity; // Create an instance of the humidity sensor
+OneWire waterTemperature(WTEMP_PIN);
 
 float humidity = 0; // [%]
 float temp = 0; // [temperature C]
 float pressure = 0; // [pressure Pa]
 float light_lvl = 455; //[analog value from 0 to 1023]
+float wtemp = 0; // [water temperature C]
 float ph = 0;
 float orp = 0;
 float ec = 0;
@@ -192,6 +196,16 @@ void loop() {
     len = strlen(buffer);
     sprintf(&buffer[len], ":S/m");
 
+    // Add water temperature
+    len = strlen(buffer);
+    buffer[len] = ';';
+    len++;
+    sprintf(&buffer[len], "TH:");
+    len = strlen(buffer);
+    dtostrf(wtemp, 1, 1, &buffer[len]);
+    len = strlen(buffer);
+    sprintf(&buffer[len], ":C");
+
     // Created message
     // Print message for reference
     Serial.println(buffer);
@@ -237,6 +251,55 @@ void calc_sensors() {
   // Calc EC
   ec = FreqCount.read();
   // TODO: calibrate value
+
+  // Calc water temperature
+  wtemp = get_water_temperature();
+}
+
+// Get the water temperature for a DS18B20 sensor
+float get_water_temperature() {
+  static byte addr[8];
+  static byte data[12];
+  static int16_t raw;
+  static byte i;
+  static byte cfg;
+
+  waterTemperature.reset_search();
+  if (!waterTemperature.search(addr)) {
+    // No sensors found.
+    return 0.0;
+  }
+
+  waterTemperature.reset();
+  waterTemperature.select(addr);
+
+  // Start acquisition, with parasite power on at the end
+  waterTemperature.write(0x44, 1);
+
+  // Wait for the measurement
+  delay(1000);
+
+  waterTemperature.reset();
+  waterTemperature.select(addr);
+
+  // Read Scratchpad
+  waterTemperature.write(0xBE);
+
+  // Read 9 bytes
+  for (i = 0; i < 9; i++) {
+    data[i] = waterTemperature.read();
+  }
+
+  // Convert data to temperature, which is a 16bit signed integer.
+  raw = (data[1] << 8) | data[0];
+  cfg = (data[4] & 0x60);
+  if (cfg == 0x00) raw = raw & ~7; // 9 bit resolution, 93.75ms
+  else if (cfg == 0x20) raw = raw & ~3; // 10 bit resolution, 187.5ms
+  else if (cfg == 0x40) raw = raw & ~1; // 11 bit resolution, 375ms
+  // Default is 12 bit resolution, 750 ms acquisition time.
+
+  // Convert to celsius
+  return (float)raw / 16.0;
 }
 
 //Returns the voltage of the light sensor based on the 3.3V rail
