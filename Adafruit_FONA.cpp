@@ -347,35 +347,57 @@ boolean Adafruit_FONA::enableGPRS(boolean onoff) {
 
   if (onoff) {
     if (!sendCheckReply(F("AT+CGATT=1"), F("OK"), 10000))
+    {
+      Serial.println("CGATT=1 failed");
       return false;
+    }
+      
 
     // set bearer profile! connection type GPRS
     if (!sendCheckReply(F("AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\""),
 			   F("OK"), 10000))
+    {
+      Serial.println("SAPBR CONTYPE failed");
       return false;
+    }
+      
 
     // set bearer profile access point name
     if (apn) {
       // Send command AT+SAPBR=3,1,"APN","<apn value>" where <apn value> is the configured APN value.
       if (!sendCheckReplyQuoted(F("AT+SAPBR=3,1,\"APN\","), apn, F("OK"), 10000))
+      {
+        Serial.println("SAPBR APN failed");
         return false;
+      }
+        
 
       // set username/password
       if (apnusername) {
         // Send command AT+SAPBR=3,1,"USER","<user>" where <user> is the configured APN username.
         if (!sendCheckReplyQuoted(F("AT+SAPBR=3,1,\"USER\","), apnusername, F("OK"), 10000))
+        {
+          Serial.println("SAPBR USER failed");
           return false;
+        }
+          
       }
       if (apnpassword) {
         // Send command AT+SAPBR=3,1,"PWD","<password>" where <password> is the configured APN password.
         if (!sendCheckReplyQuoted(F("AT+SAPBR=3,1,\"PWD\","), apnpassword, F("OK"), 10000))
+        {
+          Serial.println("SAPBR PWD failed");
           return false;
+        }
       }
     }
 
     // open GPRS context
     if (!sendCheckReply(F("AT+SAPBR=1,1"), F("OK"), 10000))
+    {
+      Serial.println("SAPBR OK failed");
       return false;
+    }
   } else {
     // close GPRS context
     if (!sendCheckReply(F("AT+SAPBR=0,1"), F("OK"), 10000))

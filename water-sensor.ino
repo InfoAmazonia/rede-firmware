@@ -7,7 +7,7 @@
 
 #include "FreqCount.h"
 
-#define SEND_INTERVAL 900 // Interval between consecutive data sends (in seconds)
+#define SEND_INTERVAL 10 // Interval between consecutive data sends (in seconds)
 
 // Constants
 // Digital I/O pins
@@ -47,6 +47,9 @@ char buffer[161];
 
 // Destination number of the message
 char destination[] = "5511947459448";
+
+// Destination URL of the HTTP POST
+char http_post_url[] = "posttestserver.com/post.php?dir=infoamazonia";
 
 // Time elapsed since last measurement (in seconds)
 int time_elapsed = 0;
@@ -91,8 +94,17 @@ void setup() {
   Serial.println(F("FONA is OK"));
 
   // Configure a GPRS APN, username, and password.
-  fona.setGPRSNetworkSettings(F("zap.vivo.com.br"), F("vivo"), F("vivo"));
-
+  fona.setGPRSNetworkSettings(F("zap.vivo.com.br"), F(""), F(""));
+  
+  // It takes around 10 seconds for the FONA to initialize
+  // We need to wait the initialization in order to enable GPRS
+  // So...
+  delay(10000);
+  if (!fona.enableGPRS(true))
+  {
+    Serial.println("FONA GPRS not enabled!");
+  }
+  
   if (!fona.enableNetworkTimeSync(true)) {
     Serial.println(F("Failed to enable time sync"));
   }
@@ -218,11 +230,45 @@ void loop() {
     } else {
       Serial.println(F("Sent!"));
     }
+
+    if (!send_http_post(http_post_url, buffer)) {
+      Serial.println(F("HTTP POST Failed"));
+    } else {
+      Serial.println(F("HTTP POST Send!"));
+    }
   }
   
   // Increase counter, sleep for 1 second.
   time_elapsed++;
   delay(1000);
+}
+
+boolean send_http_post(char *url, char *data) {
+  uint16_t statuscode;
+  uint16_t response_length;
+  boolean post_success;
+
+  //clear serial buffer
+  while (Serial.available()) 
+  {
+    Serial.read();
+  }
+    
+  fona.HTTP_POST_start(url, F("text/plain"), (uint8_t *)data, strlen(data), &statuscode, &response_length);
+
+  Serial.print("Status: ");
+  Serial.println(statuscode);
+
+  post_success = (statuscode == 200);
+  
+  while (response_length > 0 && fona.available()) {
+    Serial.write(fona.read());
+    response_length--;
+  }
+
+  fona.HTTP_POST_end();
+  
+  return post_success;
 }
 
 // Get the values for each sensor
