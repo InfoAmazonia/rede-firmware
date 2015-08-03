@@ -7,7 +7,7 @@
 
 #include "FreqCount.h"
 
-#define SEND_INTERVAL 10 // Interval between consecutive data sends (in seconds)
+#define SEND_INTERVAL 30 // Interval between consecutive data sends (in seconds)
 
 // Constants
 // Digital I/O pins
@@ -15,13 +15,22 @@ const byte FONA_KEY = 10;
 const byte FONA_RST = 12;
 const byte FONA_EN_BAT = 13;
 
+const byte MULT_A = 42;
+const byte MULT_B = 43;
+const byte MULT_C = 40;
+
 // Analog I/O pins
-const byte LIGHT = A5; // Not currently used
+const byte LIGHT = A13; // Not currently used
 const byte REFERENCE_3V3 = A3; // Not currently used
 const byte WDIR = A0; // Not currently used
-const byte PH_PIN = A4;
-const byte ORP_PIN = A3;
-const byte WTEMP_PIN = A15;
+const byte PH_PIN = A12;
+const byte ORP_PIN = A11;
+const byte WTEMP_PIN = 20;
+
+const byte S1_EN = A5; // S1: EC sensor
+const byte S2_EN = A6; // S2: ORP sensor
+const byte S3_EN = A7; // S3: pH sensor
+
 // Conductivity sensor (EC) uses pin 47 and disables pins 9, 10, 44, 45, 46.
 
 // Offset values
@@ -72,9 +81,21 @@ void setup() {
   // Configure the humidity sensor
   myHumidity.begin();
 
-  // Start EC sensor
-  FreqCount.begin(1000);
+  // Set output pins
+  pinMode(S1_EN, OUTPUT);
+  digitalWrite(S1_EN, HIGH);
+  pinMode(S2_EN, OUTPUT);
+  digitalWrite(S2_EN, HIGH);
+  pinMode(S3_EN, OUTPUT);
+  digitalWrite(S3_EN, HIGH);
 
+  pinMode(MULT_A, OUTPUT);
+  digitalWrite(MULT_A, HIGH);
+  pinMode(MULT_B, OUTPUT);
+  digitalWrite(MULT_B, HIGH);
+  pinMode(MULT_C, OUTPUT);
+  digitalWrite(MULT_C, LOW);
+  
   // Set key pin to low
   pinMode(FONA_KEY, OUTPUT);
   digitalWrite(FONA_KEY, LOW);
@@ -283,20 +304,34 @@ void calc_sensors() {
   pressure = myPressure.readPressure();
 
   // Calc light level
-  light_lvl = get_light_level();
+  //light_lvl = get_light_level();
 
-  // Calc pH
-  ph = analogRead(PH_PIN) * 5.0 / 1024;
-  ph = 3.5 * ph + PH_OFFSET;
+  // Calc EC
+  delay(500);
+  digitalWrite(S1_EN, LOW);
+  FreqCount.begin(1000);
+  while ( !FreqCount.available());
+  ec = FreqCount.read();
+  FreqCount.end();
+  // TODO: calibrate value
+  digitalWrite(S1_EN, HIGH);
 
   // Calc orp
+  delay(500);
+  digitalWrite(S2_EN, LOW);
+  delay(1000);
   orp = (30.0 * SYSTEM_VOLTAGE * 1000.0) - (75.0 * analogRead(ORP_PIN) *
       SYSTEM_VOLTAGE * 1000 / 1024.0);
   orp = (orp / 75.0) - ORP_OFFSET;
+  digitalWrite(S2_EN, HIGH);
 
-  // Calc EC
-  ec = FreqCount.read();
-  // TODO: calibrate value
+  // Calc pH
+  delay(500);
+  digitalWrite(S3_EN, LOW);
+  delay(1000);
+  ph = analogRead(PH_PIN) * 5.0 / 1024;
+  ph = 3.5 * ph + PH_OFFSET;
+  digitalWrite(S3_EN, HIGH);
 
   // Calc water temperature
   wtemp = get_water_temperature();
