@@ -43,6 +43,8 @@ const byte MULT_A = 42;
 const byte MULT_B = 43;
 const byte MULT_C = 40;
 
+const int id = 1;
+
 // Analog I/O pins
 const byte LIGHT = A13; // Not currently used
 const byte REFERENCE_3V3 = A3; // Not currently used
@@ -77,6 +79,7 @@ float ec = 0;
 
 // Message buffer
 char buffer[161];
+char buffer2[201];
 
 // Destination number of the message
 char destination[] = "5511947459448";
@@ -276,7 +279,7 @@ void loop() {
       Serial.println(F("Sent!"));
     }
 
-    if (!send_http_post(http_post_url, buffer)) {
+    if (!send_http_post(http_post_url, id, buffer)) {
       Serial.println(F("HTTP POST Failed"));
     } else {
       Serial.println(F("HTTP POST Send!"));
@@ -288,7 +291,7 @@ void loop() {
   delay(1000);
 }
 
-boolean send_http_post(char *url, char *data) {
+boolean send_http_post(char *url, int id, char *data) {
   uint16_t statuscode;
   uint16_t response_length;
   boolean post_success;
@@ -298,8 +301,14 @@ boolean send_http_post(char *url, char *data) {
   {
     Serial.read();
   }
+  
+  sprintf(buffer2, "{\"sensorIdentifier\":\"%d\",\"data\":\"%s\"}",
+                    id, data);
+
+  Serial.print("POST message: ");
+  Serial.println(buffer2);
     
-  fona.HTTP_POST_start(url, F("text/plain"), (uint8_t *)data, strlen(data), &statuscode, &response_length);
+  fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)buffer2, strlen(buffer2), &statuscode, &response_length);
 
   Serial.print("Status: ");
   Serial.println(statuscode);
