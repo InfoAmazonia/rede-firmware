@@ -327,14 +327,20 @@ boolean send_http_post(char *url, int id, char *data) {
 
 // Get the values for each sensor
 void calc_sensors() {
+  Wire.begin();
+  delay(100);
+  
   // Calc humidity
   humidity = myHumidity.readHumidity();
-
+  
   // Calc temp from pressure sensor
   temp = myPressure.readTemp();
 
   // Calc pressure
   pressure = myPressure.readPressure();
+  
+  //End the I2C Hardware so the temp sensor on the same bys can work
+  TWCR = 0;
 
   // Calc light level
   //light_lvl = get_light_level();
