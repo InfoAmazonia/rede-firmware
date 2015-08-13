@@ -43,7 +43,6 @@ const byte MULT_A = 42;
 const byte MULT_B = 43;
 const byte MULT_C = 40;
 
-const int id = 1;
 
 // Analog I/O pins
 const byte LIGHT = A13; // Not currently used
@@ -85,7 +84,10 @@ char buffer2[201];
 char destination[] = "5511947459448";
 
 // Destination URL of the HTTP POST
-char http_post_url[] = "posttestserver.com/post.php?dir=infoamazonia";
+char http_post_url[] = "http://rede.infoamazonia.org/api/v1/measurements/new";
+
+// Id of the device
+char id[] = "+551199999991";
 
 // Time elapsed since last measurement (in seconds)
 int time_elapsed = 0;
@@ -194,37 +196,35 @@ void loop() {
     len = strlen(buffer);
     buffer[len] = ';';
     len++;
-    sprintf(&buffer[len], "U:");
+    sprintf(&buffer[len], "RH=");
     len = strlen(buffer);
     dtostrf(humidity, 1, 1, &buffer[len]);
-    len = strlen(buffer);
-    sprintf(&buffer[len], ":RH");
 
     // Add temperature
     len = strlen(buffer);
     buffer[len] = ';';
     len++;
-    sprintf(&buffer[len], "TA:");
+    sprintf(&buffer[len], "Ta:");
+    len = strlen(buffer);
+    sprintf(&buffer[len], "C=");
     len = strlen(buffer);
     dtostrf(temp, 1, 1, &buffer[len]);
-    len = strlen(buffer);
-    sprintf(&buffer[len], ":C");
 
     // Add pressure 
     len = strlen(buffer);
     buffer[len] = ';';
     len++;
-    sprintf(&buffer[len], "P:");
+    sprintf(&buffer[len], "AP:");
+    len = strlen(buffer);
+    sprintf(&buffer[len], "Pa=");
     len = strlen(buffer);
     dtostrf(pressure, 1, 0, &buffer[len]);
-    len = strlen(buffer);
-    sprintf(&buffer[len], ":Pa");
 
     // Add light level 
     len = strlen(buffer);
     buffer[len] = ';';
     len++;
-    sprintf(&buffer[len], "L:");
+    sprintf(&buffer[len], "L=");
     len = strlen(buffer);
     dtostrf(light_lvl, 1, 0, &buffer[len]);
 
@@ -232,7 +232,7 @@ void loop() {
     len = strlen(buffer);
     buffer[len] = ';';
     len++;
-    sprintf(&buffer[len], "PH:");
+    sprintf(&buffer[len], "pH=");
     len = strlen(buffer);
     dtostrf(ph, 1, 2, &buffer[len]);
 
@@ -242,9 +242,9 @@ void loop() {
     len++;
     sprintf(&buffer[len], "ORP:");
     len = strlen(buffer);
-    dtostrf(orp, 1, 2, &buffer[len]);
+    sprintf(&buffer[len], "mV=");
     len = strlen(buffer);
-    sprintf(&buffer[len], ":mV");
+    dtostrf(orp, 1, 2, &buffer[len]);
 
     // Add ec 
     len = strlen(buffer);
@@ -252,19 +252,19 @@ void loop() {
     len++;
     sprintf(&buffer[len], "EC:");
     len = strlen(buffer);
-    dtostrf(ec, 1, 1, &buffer[len]);
+    sprintf(&buffer[len], "S/m=");
     len = strlen(buffer);
-    sprintf(&buffer[len], ":S/m");
+    dtostrf(ec, 1, 1, &buffer[len]);
 
     // Add water temperature
     len = strlen(buffer);
     buffer[len] = ';';
     len++;
-    sprintf(&buffer[len], "TH:");
+    sprintf(&buffer[len], "Tw:");
+    len = strlen(buffer);
+    sprintf(&buffer[len], "C=");
     len = strlen(buffer);
     dtostrf(wtemp, 1, 1, &buffer[len]);
-    len = strlen(buffer);
-    sprintf(&buffer[len], ":C");
 
     // Created message
     // Print message for reference
@@ -291,7 +291,7 @@ void loop() {
   delay(1000);
 }
 
-boolean send_http_post(char *url, int id, char *data) {
+boolean send_http_post(char *url, char *id, char *data) {
   uint16_t statuscode;
   uint16_t response_length;
   boolean post_success;
@@ -302,7 +302,7 @@ boolean send_http_post(char *url, int id, char *data) {
     Serial.read();
   }
   
-  sprintf(buffer2, "{\"sensorIdentifier\":\"%d\",\"data\":\"%s\"}",
+  sprintf(buffer2, "{\"sensorIdentifier\":\"%s\",\"data\":\"%s\"}",
                     id, data);
 
   Serial.print("POST message: ");
