@@ -308,7 +308,7 @@ boolean send_http_post(char *url, char *id, char *data) {
   Serial.print("POST message: ");
   Serial.println(buffer2);
     
-  fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)buffer2, strlen(buffer2), &statuscode, &response_length);
+  fona.HTTP_POST_start(url, F("Content-Type: application/json"), (uint8_t *)buffer2, strlen(buffer2), &statuscode, &response_length);
 
   Serial.print("Status: ");
   Serial.println(statuscode);
