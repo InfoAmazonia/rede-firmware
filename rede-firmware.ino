@@ -150,9 +150,10 @@ void setup() {
   // We need to wait the initialization in order to enable GPRS
   // So...
   delay(10000);
-  if (!fona.enableGPRS(true))
+  for (int i = 0; i < 3 && !fona.enableGPRS(true); i++)
   {
     Serial.println("FONA GPRS not enabled!");
+    delay(10000);
   }
   
   if (!fona.enableNetworkTimeSync(true)) {
@@ -224,7 +225,7 @@ void loop() {
     len = strlen(buffer);
     buffer[len] = ';';
     len++;
-    sprintf(&buffer[len], "L=");
+    sprintf(&buffer[len], "E=");
     len = strlen(buffer);
     dtostrf(light_lvl, 1, 0, &buffer[len]);
 
@@ -274,15 +275,15 @@ void loop() {
 
     // Send message
     if (!fona.sendSMS(destination, buffer)) {
-      Serial.println(F("Failed"));
+      Serial.println(F("SMS failed"));
     } else {
-      Serial.println(F("Sent!"));
+      Serial.println(F("SMS sent!"));
     }
 
     if (!send_http_post(http_post_url, id, buffer)) {
       Serial.println(F("HTTP POST Failed"));
     } else {
-      Serial.println(F("HTTP POST Send!"));
+      Serial.println(F("HTTP POST Sent!"));
     }
   }
   
@@ -308,7 +309,7 @@ boolean send_http_post(char *url, char *id, char *data) {
   Serial.print("POST message: ");
   Serial.println(buffer2);
     
-  fona.HTTP_POST_start(url, F("Content-Type: application/json"), (uint8_t *)buffer2, strlen(buffer2), &statuscode, &response_length);
+  fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)buffer2, strlen(buffer2), &statuscode, &response_length);
 
   Serial.print("Status: ");
   Serial.println(statuscode);
