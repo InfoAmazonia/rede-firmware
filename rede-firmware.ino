@@ -33,6 +33,16 @@ SOFTWARE.
 
 #define SEND_INTERVAL 30 // Interval between consecutive data sends (in seconds)
 
+// Defines to enable or disable sensors
+#define HUMIDITY_SENSOR 1
+#define AMBIENT_TEMPERATURE_SENSOR 0
+#define PRESSURE_SENSOR 0
+#define LIGHT_LEVEL_SENSOR 0
+#define PH_SENSOR 1
+#define ORP_SENSOR 1
+#define EC_SENSOR 1
+#define WATER_TEMPERATURE_SENSOR 1
+
 // Constants
 // Digital I/O pins
 const byte FONA_KEY = 10;
@@ -193,6 +203,7 @@ void loop() {
 
     // Use dtostrf now to print data to the buffer.
 
+#if HUMIDITY_SENSOR
     // Add humidity
     len = strlen(buffer);
     buffer[len] = ';';
@@ -200,8 +211,10 @@ void loop() {
     sprintf(&buffer[len], "RH=");
     len = strlen(buffer);
     dtostrf(humidity, 1, 1, &buffer[len]);
+#endif // HUMIDITY_SENSOR
 
-    // Add temperature
+#if AMBIENT_TEMPERATURE_SENSOR
+    // Add ambient temperature
     len = strlen(buffer);
     buffer[len] = ';';
     len++;
@@ -210,7 +223,9 @@ void loop() {
     sprintf(&buffer[len], "C=");
     len = strlen(buffer);
     dtostrf(temp, 1, 1, &buffer[len]);
+#endif // AMBIENT_TEMPERATURE_SENSOR
 
+#if PRESSURE_SENSOR
     // Add pressure 
     len = strlen(buffer);
     buffer[len] = ';';
@@ -220,7 +235,9 @@ void loop() {
     sprintf(&buffer[len], "Pa=");
     len = strlen(buffer);
     dtostrf(pressure, 1, 0, &buffer[len]);
+#endif // PRESSURE_SENSOR
 
+#if LIGHT_LEVEL_SENSOR
     // Add light level 
     len = strlen(buffer);
     buffer[len] = ';';
@@ -228,7 +245,9 @@ void loop() {
     sprintf(&buffer[len], "E=");
     len = strlen(buffer);
     dtostrf(light_lvl, 1, 0, &buffer[len]);
+#endif // LIGHT_LEVEL_SENSOR
 
+#if PH_SENSOR
     // Add ph 
     len = strlen(buffer);
     buffer[len] = ';';
@@ -236,7 +255,9 @@ void loop() {
     sprintf(&buffer[len], "pH=");
     len = strlen(buffer);
     dtostrf(ph, 1, 2, &buffer[len]);
+#endif // PH_SENSOR
 
+#if ORP_SENSOR
     // Add orp
     len = strlen(buffer);
     buffer[len] = ';';
@@ -246,7 +267,9 @@ void loop() {
     sprintf(&buffer[len], "mV=");
     len = strlen(buffer);
     dtostrf(orp, 1, 2, &buffer[len]);
+#endif // ORP_SENSOR
 
+#if EC_SENSOR
     // Add ec 
     len = strlen(buffer);
     buffer[len] = ';';
@@ -256,7 +279,9 @@ void loop() {
     sprintf(&buffer[len], "S/m=");
     len = strlen(buffer);
     dtostrf(ec, 1, 1, &buffer[len]);
+#endif // EC_SENSOR
 
+#if WATER_TEMPERATURE_SENSOR
     // Add water temperature
     len = strlen(buffer);
     buffer[len] = ';';
@@ -266,6 +291,7 @@ void loop() {
     sprintf(&buffer[len], "C=");
     len = strlen(buffer);
     dtostrf(wtemp, 1, 1, &buffer[len]);
+#endif // WATER_TEMPERATURE_SENSOR
 
     // Created message
     // Print message for reference
@@ -298,8 +324,7 @@ boolean send_http_post(char *url, char *id, char *data) {
   boolean post_success;
 
   //clear serial buffer
-  while (Serial.available()) 
-  {
+  while (Serial.available()) {
     Serial.read();
   }
   
@@ -331,31 +356,42 @@ void calc_sensors() {
   Wire.begin();
   delay(100);
   
+#if HUMIDITY_SENSOR
   // Calc humidity
   humidity = myHumidity.readHumidity();
+#endif // HUMIDITY_SENSOR
   
+#if AMBIENT_TEMPERATURE_SENSOR
   // Calc temp from pressure sensor
   temp = myPressure.readTemp();
+#endif // AMBIENT_TEMPERATURE_SENSOR
 
+#if PRESSURE_SENSOR
   // Calc pressure
   pressure = myPressure.readPressure();
+#endif // PRESSURE_SENSOR
   
   //End the I2C Hardware so the temp sensor on the same bys can work
   TWCR = 0;
 
+#if LIGHT_LEVEL_SENSOR
   // Calc light level
-  //light_lvl = get_light_level();
+  light_lvl = get_light_level();
+#endif // LIGHT_LEVEL_SENSOR
 
+#if EC_SENSOR
   // Calc EC
   delay(500);
   digitalWrite(S1_EN, LOW);
   FreqCount.begin(1000);
-  while ( !FreqCount.available());
+  while (!FreqCount.available());
   ec = FreqCount.read();
   FreqCount.end();
   // TODO: calibrate value
   digitalWrite(S1_EN, HIGH);
+#endif // EC_SENSOR
 
+#if ORP_SENSOR
   // Calc orp
   delay(500);
   digitalWrite(S2_EN, LOW);
@@ -364,7 +400,9 @@ void calc_sensors() {
       SYSTEM_VOLTAGE * 1000 / 1024.0);
   orp = (orp / 75.0) - ORP_OFFSET;
   digitalWrite(S2_EN, HIGH);
+#endif // ORP_SENSOR
 
+#if PH_SENSOR
   // Calc pH
   delay(500);
   digitalWrite(S3_EN, LOW);
@@ -372,9 +410,12 @@ void calc_sensors() {
   ph = analogRead(PH_PIN) * 5.0 / 1024;
   ph = 3.5 * ph + PH_OFFSET;
   digitalWrite(S3_EN, HIGH);
+#endif // PH_SENSOR
 
+#if WATER_TEMPERATURE_SENSOR
   // Calc water temperature
   wtemp = get_water_temperature();
+#endif // WATER_TEMPERATURE_SENSOR
 }
 
 // Get the water temperature for a DS18B20 sensor
