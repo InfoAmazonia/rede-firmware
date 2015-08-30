@@ -12,13 +12,13 @@ Os outros arquivos são licenciados de acordo com suas próprias licenças, de a
 
 This repository contains the source code of Mãe d'Água.
 
-Mãe d'Água is an open hardware to monitor water quality in real time. The system will help infer physicochemical properties and variables that differentiates drinkable from contaminated water. Mãe d'Água is part of the project <a href="http://infoamazonia.org/projects/infoamazonia-network/">InfoAmazonia Network</a>.
+Mãe d'Água is an open hardware to monitor water quality in real time. The system will help infer physicochemical properties and variables that differentiate drinkable from contaminated water. Mãe d'Água is part of the project <a href="http://infoamazonia.org/projects/infoamazonia-network/">InfoAmazonia Network</a>.
 
-The device will measure acidity in water by power of hydrogen (pH), oxidation / reduction potential (ORP), conductivity, temperature and barometric pressure in the water level, which are important factors to consider when assessing water quality for human consumption.
+The device will measure acidity in water by potential of hydrogen (pH), oxidation-reduction potential (ORP), conductivity, temperature and barometric pressure in the water level, which are important factors to consider when assessing water quality for human consumption.
 
 The hardware is modular:
 - Module 1 (M1): composed by Arduino Mega, it is responsible for all processing of information captured by the sensors and the entire power supply (connected to an external source).
-- Module 2 (M2): Arduino shield, designed using Eagle platform, with the barometric pressure sensor and connectors for coupling the pH, ORP, conductivity and water temperature sensors. This way, it is possible to select modules that are appropriate aiming the best cost-benefit ratio of specific desired application. This module was designed using Eagle.
+- Module 2 (M2): Arduino shield, designed using Eagle platform, with the barometric pressure sensor and connectors for coupling the pH, ORP, conductivity and water temperature sensors. This way, it is possible to select modules that are appropriate aiming the best cost-benefit ratio of specific desired application.
 - Module 3 (M3): responsible for mobile communication (2G), capable of transmitting data by Internet and by SMS to the InfoAmazonia Network internet server. As auxiliary data access strategy, the M2 also features a SD memory card slot.
 
 The complete hardware will capture a reading of each of the sensors per hour, and send them to our remote server, which will provide visualization in an open database.
