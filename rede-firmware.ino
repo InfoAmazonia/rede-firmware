@@ -134,41 +134,9 @@ void setup() {
   digitalWrite(MULT_B, HIGH);
   pinMode(MULT_C, OUTPUT);
   digitalWrite(MULT_C, LOW);
-  
-  // Set key pin to low
-  pinMode(FONA_KEY, OUTPUT);
-  digitalWrite(FONA_KEY, LOW);
-
-  // Enables fona battery
-  pinMode(FONA_EN_BAT, OUTPUT);
-  digitalWrite(FONA_EN_BAT, HIGH);
 
   // Connection to the SIM800
   Serial2.begin(4800);
-
-  // See if the FONA is responding
-  if (!fona.begin(Serial2)) {
-    Serial.println(F("FONA not found"));
-    while (1);
-  }
-  Serial.println(F("FONA is OK"));
-
-  // Configure a GPRS APN, username, and password.
-  fona.setGPRSNetworkSettings(F("zap.vivo.com.br"), F(""), F(""));
-  
-  // It takes around 10 seconds for the FONA to initialize
-  // We need to wait the initialization in order to enable GPRS
-  // So...
-  delay(10000);
-  for (int i = 0; i < 3 && !fona.enableGPRS(true); i++)
-  {
-    Serial.println("FONA GPRS not enabled!");
-    delay(10000);
-  }
-  
-  if (!fona.enableNetworkTimeSync(true)) {
-    Serial.println(F("Failed to enable time sync"));
-  }
 
   calc_sensors();
 }
@@ -176,10 +144,13 @@ void setup() {
 void loop() {
   if (time_elapsed >= SEND_INTERVAL) {
     time_elapsed = 0;
-    // Get time.
-    fona.getTime(buffer+1, 25);
     // Get readings from weather shield.
     calc_sensors();
+
+    // Enable fona
+    enable_fona();
+    // Get time.
+    fona.getTime(buffer+1, 25);
 
     // Format of the buffer:
     // <YYYY-MM-DDTHH:MM:SS-03:00>;<type1>:<value1>:{unit1};...;<typeN>:<valueN>:{unitN}
@@ -200,8 +171,6 @@ void loop() {
         break;
       }
     }
-
-    // Use dtostrf now to print data to the buffer.
 
 #if HUMIDITY_SENSOR
     // Add humidity
@@ -311,11 +280,63 @@ void loop() {
     } else {
       Serial.println(F("HTTP POST Sent!"));
     }
+
+    disable_fona();
   }
   
   // Increase counter, sleep for 1 second.
   time_elapsed++;
   delay(1000);
+}
+
+boolean enable_fona() {
+  // Set key pin to low
+  pinMode(FONA_KEY, OUTPUT);
+  digitalWrite(FONA_KEY, LOW);
+
+  // Enable fona battery
+  pinMode(FONA_EN_BAT, OUTPUT);
+  digitalWrite(FONA_EN_BAT, HIGH);
+  
+  // See if the FONA is responding
+  if (!fona.begin(Serial2)) {
+    Serial.println(F("FONA not found"));
+    return false;
+  }
+  Serial.println(F("FONA is OK"));
+
+  // Configure a GPRS APN, username, and password.
+  fona.setGPRSNetworkSettings(F("zap.vivo.com.br"), F(""), F(""));
+  
+  // It takes around 10 seconds for the FONA to initialize
+  // We need to wait the initialization in order to enable GPRS
+  // So...
+  delay(10000);
+  for (int i = 0; i < 4 && !fona.enableGPRS(true); i++)
+  {
+    Serial.println("FONA GPRS not enabled!");
+    delay(10000);
+  }
+  
+  if (!fona.enableNetworkTimeSync(true)) {
+    Serial.println(F("Failed to enable time sync"));
+  }
+
+  Serial.println(F("Enabled fona"));
+
+  return true;
+}
+
+void disable_fona() {
+  // Set key pin to high
+  pinMode(FONA_KEY, OUTPUT);
+  digitalWrite(FONA_KEY, HIGH);
+
+  // Disable fona battery
+  pinMode(FONA_EN_BAT, OUTPUT);
+  digitalWrite(FONA_EN_BAT, LOW);
+
+  Serial.println(F("Disabled fona"));
 }
 
 boolean send_http_post(char *url, char *id, char *data) {
@@ -334,7 +355,8 @@ boolean send_http_post(char *url, char *id, char *data) {
   Serial.print("POST message: ");
   Serial.println(buffer2);
     
-  fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)buffer2, strlen(buffer2), &statuscode, &response_length);
+  fona.HTTP_POST_start(url, F("application/json"), (uint8_t *)buffer2,
+                       strlen(buffer2), &statuscode, &response_length);
 
   Serial.print("Status: ");
   Serial.println(statuscode);
@@ -464,8 +486,9 @@ float get_water_temperature() {
   return (float)raw / 16.0;
 }
 
-//Returns the voltage of the light sensor based on the 3.3V rail
-//This allows us to ignore what VCC might be (an Arduino plugged into USB has VCC of 4.5 to 5.2V)
+// Returns the voltage of the light sensor based on the 3.3V rail
+// This allows us to ignore what VCC might be (an Arduino plugged into USB has
+// VCC of 4.5 to 5.2V)
 float get_light_level() {
   float operatingVoltage = analogRead(REFERENCE_3V3);
 
