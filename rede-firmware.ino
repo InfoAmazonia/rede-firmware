@@ -28,10 +28,11 @@ SOFTWARE.
 #include "MPL3115A2.h" //Pressure sensor
 #include "HTU21D.h" //Humidity sensor
 #include "OneWire.h" // Water temperature sensor
+#include <avr/wdt.h> // Watchdog
 
 #include "FreqCount.h"
 
-#define SEND_INTERVAL 30 // Interval between consecutive data sends (in seconds)
+#define SEND_INTERVAL 300 // Interval between consecutive data sends (in seconds)
 
 // Defines to enable or disable sensors
 #define HUMIDITY_SENSOR 1
@@ -42,6 +43,9 @@ SOFTWARE.
 #define ORP_SENSOR 1
 #define EC_SENSOR 1
 #define WATER_TEMPERATURE_SENSOR 1
+
+// Define to enable or disable watchdog
+#define WATCHDOG_ENABLE 0
 
 // Constants
 // Digital I/O pins
@@ -104,6 +108,24 @@ int time_elapsed = 0;
 
 Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
 
+#if WATCHDOG_ENABLE
+uint8_t wdt_cycles;
+
+// Watchdog timer interrupt
+ISR(WDT_vect) {
+  // More than 1 minute without finishing the loop, something might have happened
+  if (wdt_cycles >= 8) {
+    // Enable modifications to the watchdog
+    WDTCSR |= (1<<WDCE) | (1<<WDE);
+    // Set new watchdog timeout (8 seconds) and set watchdog to interrupt and
+    // system reset mode
+    WDTCSR = (1<<WDP3) | (1<<WDP0) | (1<<WDIE) | (1<<WDE);
+  }
+  wdt_cycles++;
+}
+#endif // WATCHDOG_ENABLE
+
+
 void setup() {
   Serial.begin(115200);
   Serial.println(F("Initializing..."));
@@ -137,6 +159,23 @@ void setup() {
 
   // Connection to the SIM800
   Serial2.begin(4800);
+
+#if WATCHDOG_ENABLE
+  cli(); // Disable interrupts
+
+  wdt_reset();
+
+  // Enable modifications to the watchdog
+  WDTCSR |= (1<<WDCE) | (1<<WDE);
+
+  // Set new watchdog timeout (8 seconds) and set watchdog to interrupt mode 
+  WDTCSR = (1<<WDP3) | (1<<WDP0) | (1<<WDIE);
+
+  wdt_cycles = 0;
+  wdt_reset();
+
+  sei(); // Enable interrupts
+#endif // WATCHDOG_ENABLE
 
   calc_sensors();
 }
@@ -283,7 +322,18 @@ void loop() {
 
     disable_fona();
   }
-  
+
+#if WATCHDOG_ENABLE
+  // Finished the loop, reset the watchdog and restart the count
+  wdt_reset();
+  wdt_cycles = 0;
+
+  // Enable modifications to the watchdog
+  WDTCSR |= (1<<WDCE) | (1<<WDE);
+  // Set new watchdog timeout (8 seconds) and set watchdog to interrupt mode 
+  WDTCSR = (1<<WDP3) | (1<<WDP0) | (1<<WDIE);
+#endif // WATCHDOG_ENABLE
+
   // Increase counter, sleep for 1 second.
   time_elapsed++;
   delay(1000);
