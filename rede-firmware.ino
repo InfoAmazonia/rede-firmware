@@ -35,9 +35,9 @@ SOFTWARE.
 #define SEND_INTERVAL 300 // Interval between consecutive data sends (in seconds)
 
 // Defines to enable or disable sensors
-#define HUMIDITY_SENSOR 1
-#define AMBIENT_TEMPERATURE_SENSOR 0
-#define PRESSURE_SENSOR 0
+#define HUMIDITY_SENSOR 0
+#define AMBIENT_TEMPERATURE_SENSOR 1
+#define PRESSURE_SENSOR 1
 #define LIGHT_LEVEL_SENSOR 0
 #define PH_SENSOR 1
 #define ORP_SENSOR 1
