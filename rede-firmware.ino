@@ -32,7 +32,7 @@ SOFTWARE.
 
 #include "FreqCount.h"
 
-#define SEND_INTERVAL 300 // Interval between consecutive data sends (in seconds)
+#define SEND_INTERVAL 60 // Interval between consecutive data sends (in seconds)
 
 // Defines to enable or disable sensors
 #define HUMIDITY_SENSOR 0
@@ -73,9 +73,13 @@ const byte S3_EN = A7; // S3: pH sensor
 // Conductivity sensor (EC) uses pin 47 and disables pins 9, 10, 44, 45, 46.
 
 // Offset values
-const float PH_OFFSET = 0.0;
 const float ORP_OFFSET = 0.0;
 const float SYSTEM_VOLTAGE = 5.0;
+
+// pH calibration values, need to be filled with values measured at the
+// calibration program
+float phStep = 75.33; // Update this value!!!
+uint16_t ph7Cal = 391; // Update this value!!!
 
 MPL3115A2 myPressure; // Create an instance of the pressure sensor
 HTU21D myHumidity; // Create an instance of the humidity sensor
@@ -101,7 +105,7 @@ char destination[] = "5511947459448";
 char http_post_url[] = "http://rede.infoamazonia.org/api/v1/measurements/new";
 
 // Id of the device
-char id[] = "+551199999991";
+char id[] = "md0000";
 
 // Time elapsed since last measurement (in seconds)
 int time_elapsed = 0;
@@ -479,8 +483,9 @@ void calc_sensors() {
   delay(500);
   digitalWrite(S3_EN, LOW);
   delay(1000);
-  ph = analogRead(PH_PIN) * 5.0 / 1024;
-  ph = 3.5 * ph + PH_OFFSET;
+  ph = ((analogRead(PH_PIN) / 1024.0) * 5.0) * 1000.0;
+  ph = ((((5.0 * ph7Cal) / 1024.0) * 1000.0) - ph) / 5.25;
+  ph = 7.0 - (ph / phStep);
   digitalWrite(S3_EN, HIGH);
 #endif // PH_SENSOR
 
