@@ -81,6 +81,11 @@ const float SYSTEM_VOLTAGE = 5.0;
 float phStep = 75.33; // Update this value!!!
 uint16_t ph7Cal = 391; // Update this value!!!
 
+// EC calibration values, need to be filled with values measured at the
+// calibration program
+float ecStep = 2.27; // Update this value!!!
+uint16_t ec5kCal = 12315; // Update this value!!!
+
 MPL3115A2 myPressure; // Create an instance of the pressure sensor
 HTU21D myHumidity; // Create an instance of the humidity sensor
 OneWire waterTemperature(WTEMP_PIN);
@@ -463,7 +468,7 @@ void calc_sensors() {
   while (!FreqCount.available());
   ec = FreqCount.read();
   FreqCount.end();
-  // TODO: calibrate value
+  ec = 5000.0 + (ec - ec5kCal) / ecStep;
   digitalWrite(S1_EN, HIGH);
 #endif // EC_SENSOR
 
