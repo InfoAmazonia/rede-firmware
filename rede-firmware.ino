@@ -72,10 +72,6 @@ const byte S3_EN = A7; // S3: pH sensor
 
 // Conductivity sensor (EC) uses pin 47 and disables pins 9, 10, 44, 45, 46.
 
-// Offset values
-const float ORP_OFFSET = 0.0;
-const float SYSTEM_VOLTAGE = 5.0;
-
 // pH calibration values, need to be filled with values measured at the
 // calibration program
 float phStep = 75.33; // Update this value!!!
@@ -85,6 +81,10 @@ uint16_t ph7Cal = 391; // Update this value!!!
 // calibration program
 float ecStep = 2.27; // Update this value!!!
 uint16_t ec5kCal = 12315; // Update this value!!!
+
+// ORP calibration values, need to be filled with values measured at the
+// calibration program
+uint16_t orpOffset = 12315; // Update this value!!!
 
 MPL3115A2 myPressure; // Create an instance of the pressure sensor
 HTU21D myHumidity; // Create an instance of the humidity sensor
@@ -477,9 +477,9 @@ void calc_sensors() {
   delay(500);
   digitalWrite(S2_EN, LOW);
   delay(1000);
-  orp = (30.0 * SYSTEM_VOLTAGE * 1000.0) - (75.0 * analogRead(ORP_PIN) *
-      SYSTEM_VOLTAGE * 1000 / 1024.0);
-  orp = (orp / 75.0) - ORP_OFFSET;
+  orp = analogRead(ORP_PIN) / 1024.0;
+  orp = (30.0 * 5.0 * 1000.0) - (75.0 * orp * 5.0 * 1000);
+  orp = (orp / 75.0) - orpOffset;
   digitalWrite(S2_EN, HIGH);
 #endif // ORP_SENSOR
 
