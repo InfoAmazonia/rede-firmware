@@ -32,7 +32,9 @@ SOFTWARE.
 
 #include "FreqCount.h"
 
-#define SEND_INTERVAL 60 // Interval between consecutive data sends (in seconds)
+// Interval between consecutive data sends (in seconds)
+#define SEND_INTERVAL 60
+#define NUM_RETRIES 5
 
 // Defines to enable or disable sensors
 #define HUMIDITY_SENSOR 0
@@ -190,13 +192,15 @@ void setup() {
 }
 
 void loop() {
+  int i;
+  boolean fona_enabled = false;
   if (time_elapsed >= SEND_INTERVAL) {
     time_elapsed = 0;
     // Get readings from weather shield.
     calc_sensors();
 
     // Enable fona
-    enable_fona();
+    fona_enabled = enable_fona();
     // Get time.
     fona.getTime(buffer+1, 25);
 
@@ -207,7 +211,7 @@ void loop() {
     buffer[1] = '0';
     int len = strlen(buffer);
     // Convert the date received to ISO format.
-    for (int i = 0; i < len; i++) {
+    for (i = 0; i < len; i++) {
       if (buffer[i] == '/')
         buffer[i] = '-';
       else if (buffer[i] == ',')
@@ -316,14 +320,30 @@ void loop() {
     Serial.print("Size: ");
     Serial.println(strlen(buffer));
 
+    if (!fona_enabled) {
+      fona_enabled = enable_fona();
+    }
+
     // Send message
-    if (!fona.sendSMS(destination, buffer)) {
+    for (i = 0; i < NUM_RETRIES; i++) {
+      if (fona.sendSMS(destination, buffer)) {
+        break;
+      }
+      delay(1000);
+    }
+    if (i >= NUM_RETRIES) {
       Serial.println(F("SMS failed"));
     } else {
       Serial.println(F("SMS sent!"));
     }
 
-    if (!send_http_post(http_post_url, id, buffer)) {
+    for (i = 0; i < NUM_RETRIES; i++) {
+      if (send_http_post(http_post_url, id, buffer)) {
+        break;
+      }
+      delay(1000);
+    }
+    if (i >= NUM_RETRIES) {
       Serial.println(F("HTTP POST Failed"));
     } else {
       Serial.println(F("HTTP POST Sent!"));
@@ -350,6 +370,7 @@ void loop() {
 
 boolean enable_fona() {
   // Set key pin to low
+  int i;
   pinMode(FONA_KEY, OUTPUT);
   digitalWrite(FONA_KEY, LOW);
 
@@ -358,7 +379,13 @@ boolean enable_fona() {
   digitalWrite(FONA_EN_BAT, HIGH);
   
   // See if the FONA is responding
-  if (!fona.begin(Serial2)) {
+  for (i = 0; i < NUM_RETRIES; i++) {
+    if (fona.begin(Serial2)) {
+      break;
+    }
+    delay(1000);
+  }
+  if (i >= NUM_RETRIES) {
     Serial.println(F("FONA not found"));
     return false;
   }
@@ -371,10 +398,13 @@ boolean enable_fona() {
   // We need to wait the initialization in order to enable GPRS
   // So...
   delay(10000);
-  for (int i = 0; i < 4 && !fona.enableGPRS(true); i++)
-  {
+  for (i = 0; i < NUM_RETRIES && !fona.enableGPRS(true); i++) {
     Serial.println("FONA GPRS not enabled!");
     delay(10000);
+  }
+  if (i >= NUM_RETRIES) {
+    Serial.println("Failed to enable GPRS!");
+    return false;
   }
   
   if (!fona.enableNetworkTimeSync(true)) {
