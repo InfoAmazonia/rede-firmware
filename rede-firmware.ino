@@ -321,6 +321,7 @@ void loop() {
     Serial.println(strlen(buffer));
 
     if (!fona_enabled) {
+      disable_fona();
       fona_enabled = enable_fona();
     }
 
@@ -341,7 +342,7 @@ void loop() {
       if (send_http_post(http_post_url, id, buffer)) {
         break;
       }
-      delay(1000);
+      delay(5000);
     }
     if (i >= NUM_RETRIES) {
       Serial.println(F("HTTP POST Failed"));
