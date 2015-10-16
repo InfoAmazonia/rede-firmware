@@ -32,10 +32,6 @@ SOFTWARE.
 
 #include "FreqCount.h"
 
-// Interval between consecutive data sends (in seconds)
-#define SEND_INTERVAL 60
-#define NUM_RETRIES 5
-
 // Defines to enable or disable sensors
 #define HUMIDITY_SENSOR 0
 #define AMBIENT_TEMPERATURE_SENSOR 1
@@ -48,6 +44,41 @@ SOFTWARE.
 
 // Define to enable or disable watchdog
 #define WATCHDOG_ENABLE 0
+
+// Define to enable or disable messages
+#define SEND_SMS 0
+#define SEND_HTTP_POST 1
+
+/*********************************************************************************/
+
+/******* SENSOR CONFIG *******/
+// pH calibration values, need to be filled with values measured at the
+// calibration program
+float phStep = 65.72; // Update this value!!!
+uint16_t ph7Cal = 376; // Update this value!!!
+
+// EC calibration values, need to be filled with values measured at the
+// calibration program
+float ecStep = 2.23; // Update this value!!!
+uint16_t ec5kCal = 11880; // Update this value!!!
+
+// ORP calibration values, need to be filled with values measured at the
+// calibration program
+uint16_t orpOffset = 46.88; // Update this value!!!
+
+/******* ID CONFIG *******/
+// Id of the device
+char id[] = "+5511941924127";
+
+/******* TIMER CONFIG *******/
+// Time elapsed since last measurement (in seconds)
+int time_elapsed = 5000;
+
+// Interval between consecutive data sends (in seconds)
+#define SEND_INTERVAL 3600
+#define NUM_RETRIES 5
+
+/*********************************************************************************/
 
 // Constants
 // Digital I/O pins
@@ -74,20 +105,6 @@ const byte S3_EN = A7; // S3: pH sensor
 
 // Conductivity sensor (EC) uses pin 47 and disables pins 9, 10, 44, 45, 46.
 
-// pH calibration values, need to be filled with values measured at the
-// calibration program
-float phStep = 75.33; // Update this value!!!
-uint16_t ph7Cal = 391; // Update this value!!!
-
-// EC calibration values, need to be filled with values measured at the
-// calibration program
-float ecStep = 2.27; // Update this value!!!
-uint16_t ec5kCal = 12315; // Update this value!!!
-
-// ORP calibration values, need to be filled with values measured at the
-// calibration program
-uint16_t orpOffset = 12315; // Update this value!!!
-
 MPL3115A2 myPressure; // Create an instance of the pressure sensor
 HTU21D myHumidity; // Create an instance of the humidity sensor
 OneWire waterTemperature(WTEMP_PIN);
@@ -110,12 +127,6 @@ char destination[] = "5511947459448";
 
 // Destination URL of the HTTP POST
 char http_post_url[] = "http://rede.infoamazonia.org/api/v1/measurements/new";
-
-// Id of the device
-char id[] = "md0000";
-
-// Time elapsed since last measurement (in seconds)
-int time_elapsed = 0;
 
 Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
 
@@ -324,7 +335,8 @@ void loop() {
       disable_fona();
       fona_enabled = enable_fona();
     }
-
+    
+#if SEND_SMS
     // Send message
     for (i = 0; i < NUM_RETRIES; i++) {
       if (fona.sendSMS(destination, buffer)) {
@@ -337,7 +349,9 @@ void loop() {
     } else {
       Serial.println(F("SMS sent!"));
     }
+#endif // SEND_SMS
 
+#if SEND_HTTP_POST
     for (i = 0; i < NUM_RETRIES; i++) {
       if (send_http_post(http_post_url, id, buffer)) {
         break;
@@ -349,6 +363,7 @@ void loop() {
     } else {
       Serial.println(F("HTTP POST Sent!"));
     }
+#endif // SEND_HTTP_POST
 
     disable_fona();
   }
