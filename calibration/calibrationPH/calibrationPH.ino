@@ -65,7 +65,7 @@ void loop() {
   Serial.println();
   
   Serial.println("Insert pH meter in the solution with pH 7.");
-  Serial.println("Press enter after the probe is inserted.");
+  Serial.println("Press 'Send' after the probe is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
   Serial.println("Measuring...");
@@ -79,7 +79,7 @@ void loop() {
   ph7Cal >>= 2;
 
   Serial.println("Insert pH meter in the solution with pH 4.");
-  Serial.println("Press enter after the probe is inserted.");
+  Serial.println("Press 'Send' after the probe is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
   Serial.println("Measuring...");
@@ -92,7 +92,7 @@ void loop() {
   ph4Cal >>= 2;
 
   Serial.println("Insert pH meter in the solution with pH 10.");
-  Serial.println("Press enter after the probe is inserted.");
+  Serial.println("Press 'Send' after the probe is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
   Serial.println("Measuring...");

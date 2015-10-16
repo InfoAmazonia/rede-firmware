@@ -56,7 +56,7 @@ void setup() {
 
   Serial.println("Beginning callibration...");
   Serial.println("Insert a 'Short Circuit' on the ORP opening.");
-  Serial.println("Press enter after the 'Short' is inserted.");
+  Serial.println("Press 'Send' after the 'Short' is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
   Serial.println("Measuring...");

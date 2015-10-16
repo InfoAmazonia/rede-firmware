@@ -64,7 +64,7 @@ void loop() {
   Serial.println();
   
   Serial.println("Insert EC meter in the solution with 5000 uS/cm.");
-  Serial.println("Press enter after the probe is inserted.");
+  Serial.println("Press 'Send' after the probe is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
   Serial.println("Measuring...");
@@ -74,7 +74,7 @@ void loop() {
   ecMediumCal = read_ec();
 
   Serial.println("Insert EC meter in the solution with 84 uS/cm.");
-  Serial.println("Press enter after the probe is inserted.");
+  Serial.println("Press 'Send' after the probe is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
   Serial.println("Measuring...");
@@ -83,7 +83,7 @@ void loop() {
   ecSmallCal = read_ec();
 
   Serial.println("Insert EC meter in the solution with 12880 uS/cm.");
-  Serial.println("Press enter after the probe is inserted.");
+  Serial.println("Press 'Send' after the probe is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
   Serial.println("Measuring...");
@@ -149,7 +149,6 @@ uint16_t read_ec() {
 
 float calc_ec(uint16_t val) {
   //Y = mx+b
-  
   float tmp = (float)(ecMediumCal - val);
   return ((float)(5000 - (tmp / ecStep)));
 }
