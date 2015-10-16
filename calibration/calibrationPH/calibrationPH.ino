@@ -42,7 +42,7 @@ const byte S3_EN = A7; // S3: pH sensor
 float ph = 0;
 
 void setup() {
-  Serial.begin(19200);
+  Serial.begin(115200);
 
   // Set output pins
   pinMode(S1_EN, OUTPUT);
@@ -62,10 +62,14 @@ void setup() {
 
 void loop() {
   Serial.println("Beginning callibration...");
+  Serial.println();
+  
   Serial.println("Insert pH meter in the solution with pH 7.");
-  Serial.println("Press enter after the meter is inserted.");
+  Serial.println("Press enter after the probe is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
+  Serial.println("Measuring...");
+  Serial.println();
 
   // Take the average of 5 measurements
   ph7Cal = 0.0;
@@ -75,9 +79,11 @@ void loop() {
   ph7Cal >>= 2;
 
   Serial.println("Insert pH meter in the solution with pH 4.");
-  Serial.println("Press enter after the meter is inserted.");
+  Serial.println("Press enter after the probe is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
+  Serial.println("Measuring...");
+  Serial.println();
 
   ph4Cal = 0;
   for (int i = 0; i < 4; i++) {
@@ -86,9 +92,11 @@ void loop() {
   ph4Cal >>= 2;
 
   Serial.println("Insert pH meter in the solution with pH 10.");
-  Serial.println("Press enter after the meter is inserted.");
+  Serial.println("Press enter after the probe is inserted.");
   while (Serial.available() == 0);
   Serial.readString();
+  Serial.println("Measuring...");
+  Serial.println();
 
   ph10Cal = 0.0;
   for (int i = 0; i < 4; i++) {
@@ -126,9 +134,16 @@ void loop() {
   Serial.println("Values to calibrate the meter:");
   Serial.print("ph7Cal: ");
   Serial.println(ph7Cal);
-  Serial.print("phStep: ");
+  Serial.print("phStep4: ");
   Serial.println(calc_ph4, 2);
+  Serial.print("phStep10: ");
+  Serial.println(calc_ph10, 2);
   Serial.println("----------------------------------");
+  
+  Serial.println();
+  Serial.println();
+  while (Serial.available() == 0);
+  Serial.readString();
 }
 
 uint16_t read_ph() {
