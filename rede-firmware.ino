@@ -75,7 +75,7 @@ char id[] = "+5511941924127";
 int time_elapsed = 5000;
 
 // Interval between consecutive data sends (in seconds)
-#define SEND_INTERVAL 3600
+#define SEND_INTERVAL 10//3600
 #define NUM_RETRIES 5
 
 /*********************************************************************************/
@@ -146,7 +146,6 @@ ISR(WDT_vect) {
   wdt_cycles++;
 }
 #endif // WATCHDOG_ENABLE
-
 
 void setup() {
   Serial.begin(115200);
@@ -364,7 +363,6 @@ void loop() {
       Serial.println(F("HTTP POST Sent!"));
     }
 #endif // SEND_HTTP_POST
-
     disable_fona();
   }
 
@@ -482,10 +480,16 @@ boolean send_http_post(char *url, char *id, char *data) {
 void calc_sensors() {
   Wire.begin();
   delay(100);
-  
+  float val, minVal,maxVal;
+  int i,j;
 #if HUMIDITY_SENSOR
   // Calc humidity
-  humidity = myHumidity.readHumidity();
+  humidity = 0;
+  for(i = 0; i < 3; i++)
+  {
+    humidity += myHumidity.readHumidity();
+  }
+  humidity = humidity/3;
 #endif // HUMIDITY_SENSOR
   
 #if AMBIENT_TEMPERATURE_SENSOR
@@ -508,41 +512,124 @@ void calc_sensors() {
 
 #if EC_SENSOR
   // Calc EC
-  delay(500);
-  digitalWrite(S1_EN, LOW);
-  FreqCount.begin(1000);
-  while (!FreqCount.available());
-  ec = FreqCount.read();
-  FreqCount.end();
-  ec = 5000.0 + (ec - ec5kCal) / ecStep;
-  digitalWrite(S1_EN, HIGH);
+  minVal = 100000;
+  maxVal = -100000;
+  val = 0;
+  for(i = 0; i < 5; i++)
+  {
+    delay(500);
+    digitalWrite(S1_EN, LOW);
+    FreqCount.begin(1000);
+    while (!FreqCount.available());
+    ec = FreqCount.read();
+    FreqCount.end();
+    ec = 5000.0 + (ec - ec5kCal) / ecStep;
+    digitalWrite(S1_EN, HIGH);
+    val += ec;  
+    if (ec < minVal)
+    {
+      minVal = ec;
+    } 
+    if (ec > maxVal)
+    {
+      maxVal = ec;
+    }
+  }
+  //Remove the largest and lowest 
+  val -= minVal;
+  val -= maxVal;
+  ec = val/3;
 #endif // EC_SENSOR
 
 #if ORP_SENSOR
   // Calc orp
-  delay(500);
-  digitalWrite(S2_EN, LOW);
-  delay(1000);
-  orp = analogRead(ORP_PIN) / 1024.0;
-  orp = (30.0 * 5.0 * 1000.0) - (75.0 * orp * 5.0 * 1000);
-  orp = (orp / 75.0) - orpOffset;
-  digitalWrite(S2_EN, HIGH);
+  minVal = 100000;
+  maxVal = -100000;
+  val = 0;
+  for(i = 0; i < 5; i++)
+  {
+    delay(500);
+    digitalWrite(S2_EN, LOW);
+    delay(1000);
+    orp = analogRead(ORP_PIN) / 1024.0;
+    orp = (30.0 * 5.0 * 1000.0) - (75.0 * orp * 5.0 * 1000);
+    orp = (orp / 75.0) - orpOffset;
+    digitalWrite(S2_EN, HIGH);
+    val += orp;  
+    if (orp < minVal)
+    {
+      minVal = orp;
+    } 
+    if (orp > maxVal)
+    {
+      maxVal = orp;
+    }
+  }
+  //Remove the largest and lowest 
+  val -= minVal;
+  val -= maxVal;
+  orp = val/3;
 #endif // ORP_SENSOR
 
 #if PH_SENSOR
   // Calc pH
-  delay(500);
-  digitalWrite(S3_EN, LOW);
-  delay(1000);
-  ph = ((analogRead(PH_PIN) / 1024.0) * 5.0) * 1000.0;
-  ph = ((((5.0 * ph7Cal) / 1024.0) * 1000.0) - ph) / 5.25;
-  ph = 7.0 - (ph / phStep);
-  digitalWrite(S3_EN, HIGH);
+  // To improve the readings we will do 5 readings,
+  // remove the largest and lowest and average the
+  // remaining 3.
+  minVal = 100000;
+  maxVal = -100000;
+  val = 0;
+  for(i = 0; i < 5; i++)
+  {
+    delay(1000);
+    digitalWrite(S3_EN, LOW);
+    delay(1000);
+    ph = ((analogRead(PH_PIN) / 1024.0) * 5.0) * 1000.0;
+    ph = ((((5.0 * ph7Cal) / 1024.0) * 1000.0) - ph) / 5.25;
+    ph = 7.0 - (ph / phStep);
+    digitalWrite(S3_EN, HIGH);
+    val += ph;  
+    if (ph < minVal)
+    {
+      minVal = ph;
+    } 
+    if (ph > maxVal)
+    {
+      maxVal = ph;
+    }
+  }
+  //Remove the largest and lowest 
+  val -= minVal;
+  val -= maxVal;
+  ph = val/3;
 #endif // PH_SENSOR
 
 #if WATER_TEMPERATURE_SENSOR
   // Calc water temperature
-  wtemp = get_water_temperature();
+  val = 0;
+  j = 3;
+  for(i = 0; i < 3; i++)
+  {
+    wtemp = get_water_temperature();
+    if(wtemp == -100)
+    {
+      Serial.println("Error with water temperature reading, trying again");
+      wtemp = get_water_temperature();        
+      if (wtemp == -100)
+      {
+        Serial.println("Couldn't get water temperature");        
+        wtemp = 0;
+        j--;
+      }
+    }
+    val += wtemp;
+  }
+  if (j == 0)
+  {
+    wtemp = -100;  
+  } else {
+    wtemp = val/j;
+  }
 #endif // WATER_TEMPERATURE_SENSOR
 }
 
@@ -557,7 +644,7 @@ float get_water_temperature() {
   waterTemperature.reset_search();
   if (!waterTemperature.search(addr)) {
     // No sensors found.
-    return 0.0;
+    return -100;
   }
 
   waterTemperature.reset();
