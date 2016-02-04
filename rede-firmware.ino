@@ -68,14 +68,14 @@ uint16_t orpOffset = 46.88; // Update this value!!!
 
 /******* ID CONFIG *******/
 // Id of the device
-char id[] = "+5511941924127";
+char id[] = "+5511997646041";
 
 /******* TIMER CONFIG *******/
 // Time elapsed since last measurement (in seconds)
-int time_elapsed = 5000;
+int time_elapsed = 60;
 
 // Interval between consecutive data sends (in seconds)
-#define SEND_INTERVAL 10//3600
+#define SEND_INTERVAL 1 //3600
 #define NUM_RETRIES 5
 
 /*********************************************************************************/
@@ -121,6 +121,8 @@ float ec = 0;
 // Message buffer
 char buffer[161];
 char buffer2[201];
+
+static byte addr[8];
 
 // Destination number of the message
 char destination[] = "5511947459448";
@@ -218,7 +220,7 @@ void loop() {
     // <YYYY-MM-DDTHH:MM:SS-03:00>;<type1>:<value1>:{unit1};...;<typeN>:<valueN>:{unitN}
     // Manually add 20 to the beginning of the buffer.
     buffer[0] = '2';
-    buffer[1] = '0';
+    //buffer[1] = '0';
     int len = strlen(buffer);
     // Convert the date received to ISO format.
     for (i = 0; i < len; i++) {
@@ -314,14 +316,17 @@ void loop() {
 
 #if WATER_TEMPERATURE_SENSOR
     // Add water temperature
-    len = strlen(buffer);
-    buffer[len] = ';';
-    len++;
-    sprintf(&buffer[len], "Tw:");
-    len = strlen(buffer);
-    sprintf(&buffer[len], "C=");
-    len = strlen(buffer);
-    dtostrf(wtemp, 1, 1, &buffer[len]);
+	if (wtemp != -100)
+	{
+		len = strlen(buffer);
+		buffer[len] = ';';
+		len++;
+		sprintf(&buffer[len], "Tw:");
+		len = strlen(buffer);
+		sprintf(&buffer[len], "C=");
+		len = strlen(buffer);
+		dtostrf(wtemp, 1, 1, &buffer[len]);
+	}
 #endif // WATER_TEMPERATURE_SENSOR
 
     // Created message
@@ -359,7 +364,8 @@ void loop() {
     }
     if (i >= NUM_RETRIES) {
       Serial.println(F("HTTP POST Failed"));
-    } else {
+    }
+    else {
       Serial.println(F("HTTP POST Sent!"));
     }
 #endif // SEND_HTTP_POST
@@ -477,7 +483,8 @@ boolean send_http_post(char *url, char *id, char *data) {
 }
 
 // Get the values for each sensor
-void calc_sensors() {
+void calc_sensors()
+{
   Wire.begin();
   delay(100);
   float val, minVal,maxVal;
@@ -611,11 +618,11 @@ void calc_sensors() {
   for(i = 0; i < 3; i++)
   {
     wtemp = get_water_temperature();
-    if(wtemp == -100)
+    if(water_offline())
     {
       Serial.println("Error with water temperature reading, trying again");
       wtemp = get_water_temperature();        
-      if (wtemp == -100)
+      if (water_offline())
       {
         Serial.println("Couldn't get water temperature");        
         wtemp = 0;
@@ -624,28 +631,30 @@ void calc_sensors() {
     }
     val += wtemp;
   }
+  
   if (j == 0)
   {
-    wtemp = -100;  
-  } else {
+    wtemp = -100;
+  }
+  else
+  {
     wtemp = val/j;
   }
 #endif // WATER_TEMPERATURE_SENSOR
 }
 
+int water_offline()
+{
+	waterTemperature.reset_search();
+    return (!waterTemperature.search(addr));
+}
+
 // Get the water temperature for a DS18B20 sensor
 float get_water_temperature() {
-  static byte addr[8];
   static byte data[12];
   static int16_t raw;
   static byte i;
   static byte cfg;
-
-  waterTemperature.reset_search();
-  if (!waterTemperature.search(addr)) {
-    // No sensors found.
-    return -100;
-  }
 
   waterTemperature.reset();
   waterTemperature.select(addr);
